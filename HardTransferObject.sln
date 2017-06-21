@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HardTransferObject", "HardTransferObject\HardTransferObject.csproj", "{BFDA99AD-CB8D-47F8-B36E-AF31869142DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HardTransferObject.Tests", "HardTransferObject.Tests\HardTransferObject.Tests.csproj", "{20DADB51-D40C-482D-835F-3F1941E240A8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BFDA99AD-CB8D-47F8-B36E-AF31869142DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFDA99AD-CB8D-47F8-B36E-AF31869142DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFDA99AD-CB8D-47F8-B36E-AF31869142DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFDA99AD-CB8D-47F8-B36E-AF31869142DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20DADB51-D40C-482D-835F-3F1941E240A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20DADB51-D40C-482D-835F-3F1941E240A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20DADB51-D40C-482D-835F-3F1941E240A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20DADB51-D40C-482D-835F-3F1941E240A8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
