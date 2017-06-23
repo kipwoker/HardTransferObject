@@ -4,6 +4,50 @@ using System.Linq;
 
 namespace HardTransferObject.Tests.Cases
 {
+    public class Model1InCollector : IConverter<Model1<string>, IModel1<string>>
+    {
+        public IModel1<string> Convert(Model1<string> @in)
+        {
+            return new Model1<string>
+            {
+                Prop = @in.Prop
+            };
+        }
+    }
+
+    public class Model1OutCollector : IConverter<IModel1<string>, Model1<string>>
+    {
+        public Model1<string> Convert(IModel1<string> @in)
+        {
+            return new Model1<string>
+            {
+                Prop = @in.Prop
+            };
+        }
+    }
+
+    public class Collection1InCollector : IConverter<Model1<string>, IModel1<string>>
+    {
+        public IModel1<string> Convert(Model1<string> @in)
+        {
+            return new Model1<string>
+            {
+                Prop = @in.Prop
+            };
+        }
+    }
+
+    public class Collection1OutCollector : IConverter<IModel1<string>, Model1<string>>
+    {
+        public Model1<string> Convert(IModel1<string> @in)
+        {
+            return new Model1<string>
+            {
+                Prop = @in.Prop
+            };
+        }
+    }
+
     public class TestProxyToBaseConverter : IConverter<ModelProxy<Model1<string>, Model2>, IModel<IModel1<string>, IModel2>>
     {
         public IModel<IModel1<string>, IModel2> Convert(ModelProxy<Model1<string>, Model2> proxy)

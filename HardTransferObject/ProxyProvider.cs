@@ -21,22 +21,77 @@ namespace HardTransferObject
         }
 
         private readonly Dictionary<Type, ProxyMapping> proxyMap = new Dictionary<Type, ProxyMapping>();
+        private readonly Dictionary<Type, Type> genericImplementationsMap = new Dictionary<Type, Type>();
 
-        public Dictionary<Type, Type> SelectAll()
+        public void Add(Type baseType)
         {
-            return proxyMap.ToDictionary(x => x.Key, x => x.Value.ProxyType);
+            GetOrCreate(baseType);
         }
 
-        public ProxyMapping GetOrCreate(Type baseType)
+        public ProxyMapping GetMapping(Type baseType)
+        {
+            return proxyMap[baseType];
+        }
+
+        public Dictionary<Type, Type> TypeMap => proxyMap.ToDictionary(x => x.Key, x => x.Value.ProxyType);
+
+        public ProxyMapping[] GetMappingChain(Type baseType)
+        {
+            var list = new List<ProxyMapping>();
+
+            var typeIterator = baseType;
+            while (true)
+            {
+                if (!proxyMap.ContainsKey(typeIterator))
+                {
+                    return list.ToArray();
+                }
+
+
+                var proxyMapping = proxyMap[typeIterator];
+                list.Add(proxyMapping);
+                typeIterator = proxyMapping.ProxyType;
+            }
+        }
+
+        private Type GetOrCreate(Type baseType)
+        {
+            if (proxyMap.ContainsKey(baseType))
+            {
+                return proxyMap[baseType].ProxyType;
+            }
+
+            var proxyType = GetOrCreateWithoutCache(baseType);
+            TryCreateProxyMapping(baseType, proxyType);
+            return proxyType;
+        }
+
+        private void TryCreateProxyMapping(Type baseType, Type proxyType)
+        {
+            if (baseType == proxyType || proxyMap.ContainsKey(baseType))
+            {
+                return;
+            }
+
+            var proxyMapping = new ProxyMapping(
+                proxyType,
+                proxyConverterFactory.CreateConverterToProxy(baseType, proxyType).Convert,
+                proxyConverterFactory.CreateConverterToBase(baseType, proxyType).Convert);
+
+            proxyMap[baseType] = proxyMapping;
+            GetOrCreate(proxyType);
+        }
+
+        private Type GetOrCreateWithoutCache(Type baseType)
         {
             if (baseType == typeof(string))
             {
-                return CreateProxyMapping(baseType, baseType);
+                return baseType;
             }
 
             if (IsNullable(baseType))
             {
-                return CreateProxyMapping(baseType, baseType);
+                return baseType;
             }
 
             if (baseType.IsArray)
@@ -46,7 +101,7 @@ namespace HardTransferObject
 
             if (!baseType.IsInterface && !baseType.IsGenericType)
             {
-                return CreateProxyMapping(baseType, baseType);
+                return baseType;
             }
 
             if (IsIEnumerableInterface(baseType))
@@ -67,85 +122,53 @@ namespace HardTransferObject
             throw new Exception($"Unknown type {baseType}");
         }
 
-        private ProxyMapping CreateProxyMapping(Type baseType, Type proxyType)
-        {
-            if (proxyMap.ContainsKey(baseType))
-            {
-                return proxyMap[baseType];
-            }
-
-            var proxyMapping = new ProxyMapping(
-                proxyType,
-                proxyConverterFactory.CreateConverterToProxy(baseType, proxyType).Convert,
-                proxyConverterFactory.CreateConverterToBase(baseType, proxyType).Convert);
-
-            if (baseType.IsInterface && proxyType.IsInterface)
-            {
-                return proxyMapping;
-            }
-
-            proxyMap[baseType] = proxyMapping;
-            return proxyMapping;
-        }
-
-        private Type GetOrCreateProxyType(Type baseType)
-        {
-            return GetOrCreate(baseType).ProxyType;
-        }
-
         private static bool IsNullable(Type type)
         {
             return Nullable.GetUnderlyingType(type) != null;
         }
 
-        private ProxyMapping CreateArrayImplementation(Type type)
+        private Type CreateArrayImplementation(Type type)
         {
             var originalElementType = type.GetElementType();
-            var patchedElementType = GetOrCreateProxyType(originalElementType);
+            var patchedElementType = GetOrCreate(originalElementType);
             if (originalElementType == patchedElementType)
             {
-                return CreateProxyMapping(type, type);
+                return type;
             }
 
-            return CreateProxyMapping(type, patchedElementType.MakeArrayType());
+            return patchedElementType.MakeArrayType();
         }
 
-        private ProxyMapping CreateGenericImplementation(Type type)
-        {
-            var implementedGenericArgsType = GetOrCreateGenericArgsImplementedType(type);
-
-            if (implementedGenericArgsType.ProxyType.IsInterface)
-            {
-                return CreateInterfaceImplementation(implementedGenericArgsType.ProxyType);
-            }
-
-            return implementedGenericArgsType;
-        }
-
-        private ProxyMapping GetOrCreateGenericArgsImplementedType(Type type)
+        private Type CreateGenericImplementation(Type type)
         {
             var originalGenericArguments = type.GetGenericArguments();
-            var pathedGenericArguments = originalGenericArguments.Select(GetOrCreateProxyType).ToArray();
+            var patchedGenericArguments = originalGenericArguments.Select(GetOrCreate).ToArray();
 
-            Type patchedType;
-            if (!originalGenericArguments.Where((x, i) => x != pathedGenericArguments[i]).Any())
+            if (type.IsInterface)
             {
-                patchedType = type;
+                var implementationType = CreateInterfaceImplementation(type);
+                TryCreateProxyMapping(type, implementationType);
+
+                return implementationType;
             }
-            else
+
+            if (originalGenericArguments.Where((x, i) => x != patchedGenericArguments[i]).Any())
             {
-                patchedType = type
+                var patchedArgsType = type
                     .GetGenericTypeDefinition()
-                    .MakeGenericType(pathedGenericArguments);
+                    .MakeGenericType(patchedGenericArguments);
+                TryCreateProxyMapping(type, patchedArgsType);
+                return patchedArgsType;
             }
-            return CreateProxyMapping(type, patchedType);
+
+            return type;
         }
 
-        private ProxyMapping CreateIEnumerableImplementation(Type type)
+        private Type CreateIEnumerableImplementation(Type type)
         {
             var enumerableType = GetEnumerableType(type);
-            var patchedType = GetOrCreateProxyType(enumerableType).MakeArrayType();
-            return CreateProxyMapping(type, patchedType);
+            var patchedType = GetOrCreate(enumerableType).MakeArrayType();
+            return patchedType;
         }
 
         private static Type GetEnumerableType(Type type)
@@ -166,28 +189,39 @@ namespace HardTransferObject
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>);
         }
 
-        private ProxyMapping CreateInterfaceImplementation(Type type)
+        private Type CreateInterfaceImplementation(Type type)
         {
             //todo: if interface has methods should throw exception
 
-            var suffix = string.Empty;
-            if (type.IsGenericType)
+            if (type.IsGenericType && genericImplementationsMap.ContainsKey(type))
             {
-                suffix = string.Join(string.Empty, type.GetGenericArguments().Select(x => x.Name));
+                return genericImplementationsMap[type].MakeGenericType(type.GenericTypeArguments);
             }
 
-            var className = $"{type.Name.TrimStart('I')}AutoImpl{suffix}";
+            var className = $"C_{type.Name.TrimStart('I')}";
             var classBuilder = moduleBuilder.DefineType(className, TypeAttributes.Class | TypeAttributes.Public);
+
+            if (type.IsGenericType)
+            {
+                var genericTypeArguments = type.GenericTypeArguments;
+                var builders = classBuilder.DefineGenericParameters(genericTypeArguments.Select((x, i) => $"T{i}").ToArray());
+                //todo: add constraints
+            }
 
             foreach (var property in type.GetProperties())
             {
-                GetOrCreateProxyType(property.PropertyType);
                 GenerateClassProperty(classBuilder, property.Name, property.PropertyType);
             }
 
             var implementationType = classBuilder.CreateType();
 
-            return CreateProxyMapping(type, implementationType);
+            if (type.IsGenericType)
+            {
+                genericImplementationsMap[type] = implementationType;
+                return implementationType.MakeGenericType(type.GenericTypeArguments);
+            }
+
+            return implementationType;
         }
 
         private static void GenerateClassProperty(TypeBuilder typeBuilder, string propertyName, Type propertyType)

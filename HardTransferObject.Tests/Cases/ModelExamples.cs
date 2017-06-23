@@ -54,9 +54,16 @@ namespace HardTransferObject.Tests.Cases
         T Prop { get; }
     }
 
-    public class Model11 : IModel1<string>
+    public interface IModel3<out T>
     {
-        public string Prop { get; set; }
+        int Number { get; }
+        T Prop { get; }
+    }
+
+    public interface IModel4<out T>
+    {
+        string Str { get; }
+        T Prop { get; }
     }
 
     public class Model1<T> : IModel1<T>

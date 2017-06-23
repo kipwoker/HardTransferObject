@@ -1,4 +1,6 @@
-﻿namespace HardTransferObject
+﻿using System.Linq;
+
+namespace HardTransferObject
 {
     public class ProxySerializer : IProxySerializer
     {
@@ -15,18 +17,23 @@
 
         public TBase Deserialize<TBase>(byte[] serializedProxy)
         {
-            var proxyMapping = proxyProvider.GetOrCreate(typeof(TBase));
-            var proxy = serializer.Deserialize(serializedProxy, proxyMapping.ProxyType);
-            var deserializedBase = proxyMapping.Deserialize<TBase>(proxy);
-            return deserializedBase;
+            var baseType = typeof(TBase);
+            proxyProvider.Add(baseType);
+
+            var mappingChain = proxyProvider.GetMappingChain(baseType);
+
+            var proxy = serializer.Deserialize(serializedProxy, mappingChain.Last().ProxyType);
+            return (TBase)mappingChain.Reverse().Aggregate(proxy, (current, t) => t.Serialize(current));
         }
 
-        public byte[] Serialize<TBase>(TBase sample)
+        public byte[] Serialize<TBase>(TBase @base)
         {
-            var proxyMapping = proxyProvider.GetOrCreate(typeof(TBase));
-            var proxy = proxyMapping.Serialize(sample);
-            var serializedProxy = serializer.Serialize(proxy, proxyMapping.ProxyType);
-            return serializedProxy;
+            var baseType = typeof(TBase);
+            proxyProvider.Add(baseType);
+            var mappingChain = proxyProvider.GetMappingChain(baseType);
+
+            var obj = mappingChain.Aggregate<ProxyMapping, object>(@base, (current, t) => t.Serialize(current));
+            return serializer.Serialize(obj, obj.GetType());
         }
     }
 }

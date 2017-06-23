@@ -16,20 +16,43 @@ namespace HardTransferObject.Tests
         {
             var moduleBuilder = ModuleBuilderProvider.Get();
 
-            var sampleType = typeof(IModel<IModel1<string>, IModel2>);
+            var sampleType = typeof(IModel1<IModel3<IModel4<Guid>>>);
 
             var proxyConverterFactory = new ProxyConverterFactory(moduleBuilder);
             var proxyProvider = new ProxyProvider(moduleBuilder, proxyConverterFactory);
 
-            var proxyMapping = proxyProvider.GetOrCreate(sampleType);
+            proxyProvider.Add(sampleType);
 
-            foreach (var type in proxyProvider.SelectAll())
+            foreach (var type in proxyProvider.TypeMap)
             {
-                Console.WriteLine($"{type.Key} -> {type.Value}");
+                Console.WriteLine($"{type.Key.ToString().Replace(sampleType.Namespace + ".", "")} -> {type.Value.ToString().Replace(sampleType.Namespace + ".", "")}");
             }
 
             Console.WriteLine("===================");
-            Console.WriteLine($"{sampleType} -> {proxyMapping.ProxyType}");
+            Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.TypeMap[sampleType].ToString().Replace(sampleType.Namespace + ".", "")}");
+
+            Console.WriteLine("===================");
+            Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.GetMappingChain(sampleType).ToString().Replace(sampleType.Namespace + ".", "")}");
+
+            //var expectedKeys = new []
+            //{
+            //    typeof(IModel<IModel1<string>, IModel2>),
+            //    typeof(Guid),
+            //    typeof(string),
+            //    typeof(int),
+            //    typeof(IEnumerable<IModel1<string>>),
+            //    typeof(IEnumerable<IModel2>),
+            //    typeof(string[]),
+            //    typeof(IModel1<IModel1<string>>[]),
+            //    typeof(Dictionary<Guid, IModel1<string>>),
+            //    typeof(List<IModel2>),
+            //    typeof(Model1<IModel2>),
+            //    typeof(Model2),
+            //    typeof(IModel1<string>),
+            //    typeof(IModel2),
+            //};
+
+            //mappings.Keys.ShouldAllBeEquivalentTo(expectedKeys);
         }
 
         [Test]
