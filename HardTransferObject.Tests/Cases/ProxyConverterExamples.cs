@@ -26,24 +26,23 @@ namespace HardTransferObject.Tests.Cases
         }
     }
 
-    public class Collection1InCollector : IConverter<Model1<string>, IModel1<string>>
+    public class Collection1InCollector : IConverter<object, object>
     {
-        public IModel1<string> Convert(Model1<string> @in)
+        public object Convert(object @in)
         {
-            return new Model1<string>
-            {
-                Prop = @in.Prop
-            };
+            return (IModel1<string>)@in;
         }
     }
 
-    public class Collection1OutCollector : IConverter<IModel1<string>, Model1<string>>
+    public class Collection1OutCollector : IConverter<object, object>
     {
-        public Model1<string> Convert(IModel1<string> @in)
+        public object Convert(object @in)
         {
+            var casted = (IModel1<string>) @in;
             return new Model1<string>
             {
-                Prop = @in.Prop
+                Prop = casted.Prop,
+                Number = casted.Number
             };
         }
     }

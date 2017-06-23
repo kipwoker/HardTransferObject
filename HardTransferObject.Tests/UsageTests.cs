@@ -18,8 +18,7 @@ namespace HardTransferObject.Tests
 
             var sampleType = typeof(IModel1<IModel3<IModel4<Guid>>>);
 
-            var proxyConverterFactory = new ProxyConverterFactory(moduleBuilder);
-            var proxyProvider = new ProxyProvider(moduleBuilder, proxyConverterFactory);
+            var proxyProvider = new ProxyProvider(moduleBuilder);
 
             proxyProvider.Add(sampleType);
 
@@ -72,8 +71,7 @@ namespace HardTransferObject.Tests
         private static ProxySerializer CreateProxySerializer(string suffix)
         {
             var moduleBuilder = ModuleBuilderProvider.Create(suffix);
-            var proxyConverterFactory = new ProxyConverterFactory(moduleBuilder);
-            var proxyProvider = new ProxyProvider(moduleBuilder, proxyConverterFactory);
+            var proxyProvider = new ProxyProvider(moduleBuilder);
             var serializer = new JsonSerializer();
             var proxySerializer = new ProxySerializer(proxyProvider, serializer);
             return proxySerializer;

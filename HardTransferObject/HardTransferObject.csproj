@@ -43,12 +43,10 @@
     <Compile Include="IConverter.cs" />
     <Compile Include="IdealConverter.cs" />
     <Compile Include="ILExtensions.cs" />
-    <Compile Include="IProxyConverterFactory.cs" />
     <Compile Include="IProxyProvider.cs" />
     <Compile Include="IProxySerializer.cs" />
     <Compile Include="ISerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ProxyConverterFactory.cs" />
     <Compile Include="ProxySerializer.cs" />
     <Compile Include="ProxyMapping.cs" />
     <Compile Include="ProxyProvider.cs" />

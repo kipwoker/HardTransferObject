@@ -10,18 +10,15 @@ namespace HardTransferObject
     {
         private readonly ModuleBuilder moduleBuilder;
 
-        private readonly IProxyConverterFactory proxyConverterFactory;
-
-        public ProxyProvider(
-            ModuleBuilder moduleBuilder,
-            IProxyConverterFactory proxyConverterFactory)
-        {
-            this.moduleBuilder = moduleBuilder;
-            this.proxyConverterFactory = proxyConverterFactory;
-        }
-
         private readonly Dictionary<Type, ProxyMapping> proxyMap = new Dictionary<Type, ProxyMapping>();
         private readonly Dictionary<Type, Type> genericImplementationsMap = new Dictionary<Type, Type>();
+        private readonly IConverter<object, object> idealConverter = new IdealConverter();
+
+        public ProxyProvider(
+            ModuleBuilder moduleBuilder)
+        {
+            this.moduleBuilder = moduleBuilder;
+        }
 
         public void Add(Type baseType)
         {
@@ -75,8 +72,8 @@ namespace HardTransferObject
 
             var proxyMapping = new ProxyMapping(
                 proxyType,
-                proxyConverterFactory.CreateConverterToProxy(baseType, proxyType).Convert,
-                proxyConverterFactory.CreateConverterToBase(baseType, proxyType).Convert);
+                CreateConverter(baseType, proxyType).Convert,
+                CreateConverter(proxyType, baseType).Convert);
 
             proxyMap[baseType] = proxyMapping;
             GetOrCreate(proxyType);
@@ -208,6 +205,8 @@ namespace HardTransferObject
                 //todo: add constraints
             }
 
+            classBuilder.AddInterfaceImplementation(type);
+
             foreach (var property in type.GetProperties())
             {
                 GenerateClassProperty(classBuilder, property.Name, property.PropertyType);
@@ -257,6 +256,90 @@ namespace HardTransferObject
             //map property methods
             property.SetGetMethod(getMethodBuilder);
             property.SetSetMethod(setMethodBuilder);
+        }
+
+        private readonly Dictionary<Type, IConverter<object, object>> converterMap = new Dictionary<Type, IConverter<object, object>>();
+
+        private IConverter<object, object> CreateConverter(Type inType, Type outType)
+        {
+            if (inType == outType)
+            {
+                return idealConverter;
+            }
+
+            if (converterMap.ContainsKey(inType))
+            {
+                return converterMap[inType];
+            }
+
+            if (inType.IsInterface)
+            {
+                var interfaceToObjectConverter = CreateInterfaceToObjectConverter(inType, outType);
+                converterMap[inType] = interfaceToObjectConverter;
+                return interfaceToObjectConverter;
+            }
+
+            if (outType.IsInterface)
+            {
+                var objectToInterfaceConverter = CreateObjectToInterfaceConverter(inType, outType);
+                converterMap[inType] = objectToInterfaceConverter;
+                return objectToInterfaceConverter;
+            }
+
+            throw new NotImplementedException($"{inType} -> {outType}");
+        }
+
+        private IConverter<object, object> CreateInterfaceToObjectConverter(Type inType, Type outType)
+        {
+            var converterName = $"{inType.Name}_To_{outType.Name}Converter";
+            var converterBuilder = moduleBuilder.DefineType(converterName, TypeAttributes.Class | TypeAttributes.Public);
+            converterBuilder.AddInterfaceImplementation(typeof(IConverter<object, object>));
+
+            var methodBuilder = converterBuilder.DefineMethod(
+                nameof(IConverter<object, object>.Convert),
+                MethodAttributes.Public |
+                MethodAttributes.Final |
+                MethodAttributes.HideBySig |
+                MethodAttributes.Virtual,
+                typeof(object),
+                new[] {typeof(object)});
+
+            var ilConvert = methodBuilder.GetILGenerator();
+            var casted = ilConvert.DeclareLocal(inType);
+            var v1 = ilConvert.DeclareLocal(typeof(object));
+
+            //var casted = (IModel1<string>) @in;
+            ilConvert.Ldarg(1);
+            ilConvert.Castclass(inType);
+            ilConvert.Stloc(casted);
+
+            ilConvert.Newobj(outType.GetConstructor(Type.EmptyTypes));
+
+            var outProps = outType.GetProperties();
+            var inProps = inType.GetProperties();
+            for (var i = 0; i < outProps.Length; i++)
+            {
+                ilConvert.Dup();
+                ilConvert.Ldloc(casted);
+                //ilConvert.Callvirt();
+            }
+
+            /*
+            return new outType {
+                Prop1 = ConverterMap[in.Prop1.Type].Convert(in.Prop1)
+            };
+            */
+
+            throw new NotImplementedException($"{inType} -> {outType}");
+        }
+
+        private IConverter<object, object> CreateObjectToInterfaceConverter(Type inType, Type outType)
+        {
+            /*
+            return in;
+            */
+
+            throw new NotImplementedException($"{inType} -> {outType}");
         }
     }
 }

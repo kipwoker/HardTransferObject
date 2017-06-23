@@ -52,6 +52,7 @@ namespace HardTransferObject.Tests.Cases
     public interface IModel1<out T>
     {
         T Prop { get; }
+        int Number { get; }
     }
 
     public interface IModel3<out T>
@@ -69,6 +70,7 @@ namespace HardTransferObject.Tests.Cases
     public class Model1<T> : IModel1<T>
     {
         public T Prop { get; set; }
+        public int Number { get; set; }
     }
 
     public interface IModel2
