@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Text;
 using FluentAssertions;
+using GroBuf;
+using GroBuf.DataMembersExtracters;
 using HardTransferObject.Tests.Cases;
 using HardTransferObject.Tests.Helpers;
 using Newtonsoft.Json;
@@ -23,9 +25,23 @@ namespace HardTransferObject.Tests
 
             proxyProvider.Add(sampleType);
 
-            foreach (var type in proxyProvider.TypeMap)
+            foreach (var type in TypeExtensions.GetAll())
             {
-                Console.WriteLine($"{type.Key.ToString().Replace(sampleType.Namespace + ".", "")} -> {type.Value.ToString().Replace(sampleType.Namespace + ".", "")}");
+                Console.WriteLine($"{type.Key.Name}:  {type.Value}");
+            }
+
+            foreach (var pair in proxyProvider.TypeMap)
+            {
+                Console.WriteLine($"{pair.Key.Name} -> {pair.Value.Name}");
+            }
+
+            foreach (var type in proxyProvider.TypeMap.Keys.Union(proxyProvider.TypeMap.Values))
+            {
+                Console.WriteLine(type.Name);
+                foreach (var prop in type.GetProperties())
+                {
+                    Console.WriteLine($"  {prop.PropertyType.Name} {prop.Name}");
+                }
             }
 
             Console.WriteLine("===================");
@@ -63,8 +79,6 @@ namespace HardTransferObject.Tests
 
     public class JsonSerializer : ISerializer
     {
-        private readonly Newtonsoft.Json.JsonSerializer serializer = new Newtonsoft.Json.JsonSerializer();
-
         public object Deserialize(byte[] data, Type type)
         {
             return JsonConvert.DeserializeObject(Encoding.UTF8.GetString(data), type);
@@ -73,6 +87,21 @@ namespace HardTransferObject.Tests
         public byte[] Serialize(object data, Type type)
         {
             return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data));
+        }
+    }
+
+    public class GrobufSerializer : ISerializer
+    {
+        private readonly Serializer serializer = new Serializer(new PropertiesExtractor(), options: GroBufOptions.WriteEmptyObjects);
+
+        public object Deserialize(byte[] data, Type type)
+        {
+            return serializer.Deserialize(type, data);
+        }
+
+        public byte[] Serialize(object data, Type type)
+        {
+            return serializer.Serialize(type, data);
         }
     }
 }

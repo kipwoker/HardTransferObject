@@ -75,7 +75,7 @@ namespace HardTransferObject
                 return proxyMap[baseType].ProxyType;
             }
 
-            var proxyType = GetOrCreateWithoutCache(baseType);
+            var proxyType = CreateWithoutCache(baseType);
             TryCreateProxyMapping(baseType, proxyType);
             return proxyType;
         }
@@ -96,7 +96,7 @@ namespace HardTransferObject
             GetOrCreate(proxyType);
         }
 
-        private Type GetOrCreateWithoutCache(Type baseType)
+        private Type CreateWithoutCache(Type baseType)
         {
             if (baseType == typeof(string))
             {
@@ -130,7 +130,7 @@ namespace HardTransferObject
 
             if (baseType.IsInterface)
             {
-                return CreateInterfaceImplementation(baseType);
+                return CreateImplementation(baseType);
             }
 
             throw new Exception($"Unknown type {baseType}");
@@ -155,24 +155,27 @@ namespace HardTransferObject
 
         private Type CreateGenericImplementation(Type type)
         {
-            var originalGenericArguments = type.GetGenericArguments();
-            var patchedGenericArguments = originalGenericArguments.Select(GetOrCreate).ToArray();
-
             if (type.IsInterface)
             {
-                var implementationType = CreateInterfaceImplementation(type);
+                var implementationType = CreateImplementation(type);
                 TryCreateProxyMapping(type, implementationType);
+                TryCreateProxyMapping(implementationType, GetOrCreate(implementationType));
 
                 return implementationType;
             }
 
-            if (originalGenericArguments.Where((x, i) => x != patchedGenericArguments[i]).Any())
+            var originalGenericArguments = type.GetGenericArguments();
+            var patchedGenericArguments = originalGenericArguments.Select(GetOrCreate).ToArray();
+            var areArgsEqual = !originalGenericArguments.Where((x, i) => x != patchedGenericArguments[i]).Any();
+
+            if (!areArgsEqual)
             {
                 var patchedArgsType = type
                     .GetGenericTypeDefinition()
                     .MakeGenericType(patchedGenericArguments);
-                TryCreateProxyMapping(type, patchedArgsType);
-                return patchedArgsType;
+                var implementationType = CreateImplementation(patchedArgsType);
+                TryCreateProxyMapping(type, implementationType);
+                return implementationType;
             }
 
             return type;
@@ -203,7 +206,7 @@ namespace HardTransferObject
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>);
         }
 
-        private Type CreateInterfaceImplementation(Type type)
+        private Type CreateImplementation(Type type)
         {
             //todo: if interface has methods should throw exception
 
@@ -212,7 +215,7 @@ namespace HardTransferObject
                 return genericImplementationsMap[type].MakeGenericType(type.GenericTypeArguments);
             }
 
-            var className = $"C_{type.Name.TrimStart('I')}";
+            var className = type.GetTypeName();
             var classBuilder = moduleBuilder.DefineType(className, TypeAttributes.Class | TypeAttributes.Public);
 
             if (type.IsGenericType)
@@ -222,11 +225,24 @@ namespace HardTransferObject
                 //todo: add constraints
             }
 
-            classBuilder.AddInterfaceImplementation(type);
+            if (type.IsInterface)
+            {
+                classBuilder.AddInterfaceImplementation(type);
+            }
 
             foreach (var property in type.GetProperties())
             {
-                GenerateClassProperty(classBuilder, property.Name, property.PropertyType);
+                Type propType;
+                if ((type.IsGenericType && type.GenericTypeArguments.Contains(property.PropertyType)) || type.IsInterface)
+                {
+                    propType = property.PropertyType;
+                }
+                else
+                {
+                    propType = GetOrCreate(property.PropertyType);
+                }
+
+                GenerateClassProperty(classBuilder, property.Name, propType);
             }
 
             var implementationType = classBuilder.CreateType();
@@ -321,7 +337,7 @@ namespace HardTransferObject
 
         private void Create(Type inType, Type outType)
         {
-            var converterName = $"{GetTypeName(inType)}_To_{GetTypeName(outType)}Converter";
+            var converterName = $"{inType.Name}_To_{outType.Name}Converter";
             var converterBuilder = moduleBuilder.DefineType(converterName, TypeAttributes.Class | TypeAttributes.Public);
             converterBuilder.AddInterfaceImplementation(typeof(IConverter<object, object>));
 
@@ -355,16 +371,7 @@ namespace HardTransferObject
             //throw new NotImplementedException($"{inType} -> {outType}");
         }
 
-        private static string GetTypeName(Type type)
-        {
-            var suffix = string.Empty;
-            if (type.IsGenericType)
-            {
-                suffix = "__" + string.Join("_", type.GetGenericArguments().Select(GetTypeName));
-            }
-
-            return $"{type.Name}{suffix}";
-        }
+        
 
         private Type CreateObjectToInterfaceConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type outType)
         {
@@ -448,7 +455,27 @@ namespace HardTransferObject
         }
     }
 
+    public static class TypeExtensions
+    {
+        private static int iterator = 0;
+        private static readonly Dictionary<Type, string> nameMap = new Dictionary<Type, string>();
 
+        public static string GetTypeName(this Type type)
+        {
+            if (!nameMap.ContainsKey(type))
+            {
+                nameMap[type] = $"C_{iterator}";
+                ++iterator;
+            }
+            
+            return nameMap[type];
+        }
+
+        public static Dictionary<Type, string> GetAll()
+        {
+            return nameMap;
+        }
+    }
 
     public class ConverterStorage
     {
