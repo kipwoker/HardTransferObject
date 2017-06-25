@@ -11,6 +11,16 @@ namespace HardTransferObject
             Emit(il, OpCodes.Brfalse, label);
         }
 
+        public static void Br(this ILGenerator il, Label label)
+        {
+            Emit(il, OpCodes.Br, label);
+        }
+
+        public static void BrS(this ILGenerator il, Label label)
+        {
+            Emit(il, OpCodes.Br_S, label);
+        }
+
         public static void Call(this ILGenerator il, ConstructorInfo constructor)
         {
             Emit(il, OpCodes.Call, constructor);
@@ -149,6 +159,11 @@ namespace HardTransferObject
         public static void Ldstr(this ILGenerator il, string constant)
         {
             Emit(il, OpCodes.Ldstr, constant);
+        }
+
+        public static void Ldsfld(this ILGenerator il, FieldInfo fieldInfo)
+        {
+            Emit(il, OpCodes.Ldsfld, fieldInfo);
         }
 
         public static void Ldtoken(this ILGenerator il, Type type)

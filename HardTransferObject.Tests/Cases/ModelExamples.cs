@@ -53,6 +53,7 @@ namespace HardTransferObject.Tests.Cases
     {
         T Prop { get; }
         int Number { get; }
+        IModel2 Model2 { get; }
     }
 
     public interface IModel3<out T>
@@ -61,17 +62,45 @@ namespace HardTransferObject.Tests.Cases
         T Prop { get; }
     }
 
+    public class Model3<T> : IModel3<T>
+    {
+        public int Number { get; set; }
+        public T Prop { get; set; }
+    }
+
     public interface IModel4<out T>
     {
         string Str { get; }
         T Prop { get; }
     }
 
+    public class Model4<T> : IModel4<T>
+    {
+        public string Str { get; set; }
+        public T Prop { get; set; }
+    }
+
     public class Model1<T> : IModel1<T>
     {
         public T Prop { get; set; }
         public int Number { get; set; }
+        public IModel2 Model2 {get; set; }
     }
+
+    public interface IModel11<out T>
+    {
+        T Prop { get; }
+        int Number { get; }
+        Model2 Model2 { get; set; }
+    }
+
+    public class Model11<T> : IModel11<T>
+    {
+        public T Prop { get; set; }
+        public int Number { get; set; }
+        public Model2 Model2 { get; set; }
+    }
+
 
     public interface IModel2
     {
@@ -85,6 +114,24 @@ namespace HardTransferObject.Tests.Cases
 
     public static class Samples
     {
+        public static readonly IModel1<IModel3<IModel4<Guid>>> Nested = new Model1<IModel3<IModel4<Guid>>>
+        {
+            Number = 111,
+            Model2 = new Model2
+            {
+                Id = "m2"
+            },
+            Prop = new Model3<IModel4<Guid>>
+            {
+                Number = 333,
+                Prop = new Model4<Guid>
+                {
+                    Str = "444",
+                    Prop = Guid.NewGuid()
+                }
+            }
+        };
+
         public static readonly IModel<IModel1<string>, IModel2> Model = new Model<IModel1<string>, IModel2>
         {
             Id = Guid.NewGuid(),

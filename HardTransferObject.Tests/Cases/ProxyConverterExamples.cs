@@ -39,11 +39,28 @@ namespace HardTransferObject.Tests.Cases
         public object Convert(object @in)
         {
             var casted = (IModel1<string>) @in;
-            return new Model1<string>
+            var converted = new Model1<string>
             {
                 Prop = casted.Prop,
-                Number = casted.Number
+                Number = casted.Number,
+                Model2 = casted.Model2
             };
+            return converted;
+        }
+    }
+
+    public class Collection2OutCollector : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (IModel1<string>)@in;
+            var converted = new Model11<string>
+            {
+                Prop = casted.Prop,
+                Number = casted.Number,
+                Model2 = (Model2)ConverterStorage.Instance.GetImplementation(typeof(IModel2)).Convert(casted.Model2)
+            };
+            return converted;
         }
     }
 

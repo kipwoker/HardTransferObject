@@ -32,38 +32,18 @@ namespace HardTransferObject.Tests
 
             Console.WriteLine("===================");
             Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.GetMappingChain(sampleType).ToString().Replace(sampleType.Namespace + ".", "")}");
-
-            //var expectedKeys = new []
-            //{
-            //    typeof(IModel<IModel1<string>, IModel2>),
-            //    typeof(Guid),
-            //    typeof(string),
-            //    typeof(int),
-            //    typeof(IEnumerable<IModel1<string>>),
-            //    typeof(IEnumerable<IModel2>),
-            //    typeof(string[]),
-            //    typeof(IModel1<IModel1<string>>[]),
-            //    typeof(Dictionary<Guid, IModel1<string>>),
-            //    typeof(List<IModel2>),
-            //    typeof(Model1<IModel2>),
-            //    typeof(Model2),
-            //    typeof(IModel1<string>),
-            //    typeof(IModel2),
-            //};
-
-            //mappings.Keys.ShouldAllBeEquivalentTo(expectedKeys);
         }
-
+        
         [Test]
         public void TestConvertToBoth()
         {
-            var sample = Samples.Model;
+            var sample = Samples.Nested;
 
             var senderProxySerializer = CreateProxySerializer("Sender");
             var recipientProxySerializer = CreateProxySerializer("Recipient");
 
             var serializedProxy = senderProxySerializer.Serialize(sample);
-            var expected = recipientProxySerializer.Deserialize<IModel<IModel1<string>, IModel2>>(serializedProxy);
+            var expected = recipientProxySerializer.Deserialize<IModel1<IModel3<IModel4<Guid>>>>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
         }

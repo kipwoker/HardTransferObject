@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,18 +7,34 @@ using System.Reflection.Emit;
 
 namespace HardTransferObject
 {
+    public static class Converters
+    {
+        public static object Convert<T, TCollection>(T[] array)
+            where TCollection : IEnumerable<T>
+        {
+            if (typeof(TCollection) == typeof(List<T>))
+            {
+                return new List<T>(array);
+            }
+
+            return null;
+        }
+    }
+
+
     public class ProxyProvider : IProxyProvider
     {
         private readonly ModuleBuilder moduleBuilder;
 
         private readonly Dictionary<Type, ProxyMapping> proxyMap = new Dictionary<Type, ProxyMapping>();
         private readonly Dictionary<Type, Type> genericImplementationsMap = new Dictionary<Type, Type>();
-        private readonly IConverter<object, object> idealConverter = new IdealConverter();
+        private readonly ConverterBuilder converterBuilder;
 
         public ProxyProvider(
             ModuleBuilder moduleBuilder)
         {
             this.moduleBuilder = moduleBuilder;
+            converterBuilder = new ConverterBuilder(moduleBuilder);
         }
 
         public void Add(Type baseType)
@@ -72,8 +89,8 @@ namespace HardTransferObject
 
             var proxyMapping = new ProxyMapping(
                 proxyType,
-                CreateConverter(baseType, proxyType).Convert,
-                CreateConverter(proxyType, baseType).Convert);
+                BuildConverter(baseType, proxyType).Convert,
+                BuildConverter(proxyType, baseType).Convert);
 
             proxyMap[baseType] = proxyMapping;
             GetOrCreate(proxyType);
@@ -226,8 +243,12 @@ namespace HardTransferObject
         private static void GenerateClassProperty(TypeBuilder typeBuilder, string propertyName, Type propertyType)
         {
             const MethodAttributes getAttr = MethodAttributes.Public |
+                                             MethodAttributes.Virtual |
+                                             MethodAttributes.NewSlot |
                                              MethodAttributes.HideBySig;
             const MethodAttributes setAttr = MethodAttributes.Public |
+                                             MethodAttributes.Virtual |
+                                             MethodAttributes.NewSlot |
                                              MethodAttributes.HideBySig;
 
             // Generate a private field
@@ -258,40 +279,49 @@ namespace HardTransferObject
             property.SetSetMethod(setMethodBuilder);
         }
 
-        private readonly Dictionary<Type, IConverter<object, object>> converterMap = new Dictionary<Type, IConverter<object, object>>();
+        private IConverter<object, object> BuildConverter(Type inType, Type outType)
+        {
+            var converter = converterBuilder.Build(inType, outType);
+            return converter;
+        }
+    }
 
-        private IConverter<object, object> CreateConverter(Type inType, Type outType)
+    public class ConverterBuilder
+    {
+        private readonly IConverter<object, object> idealConverter = new IdealConverter();
+        private static readonly MethodInfo typeOfMethodInfo = typeof(Type)
+            .GetMethod(nameof(Type.GetTypeFromHandle), BindingFlags.Public | BindingFlags.Static);
+
+        private static readonly MethodInfo convertMethodInfo = typeof(IConverter<object, object>)
+            .GetMethod(nameof(IConverter<object, object>.Convert), BindingFlags.Public | BindingFlags.Instance);
+
+        private readonly Type objectType = typeof(object);
+
+        private readonly ModuleBuilder moduleBuilder;
+
+        public ConverterBuilder(ModuleBuilder moduleBuilder)
+        {
+            this.moduleBuilder = moduleBuilder;
+        }
+
+        public IConverter<object, object> Build(Type inType, Type outType)
         {
             if (inType == outType)
             {
                 return idealConverter;
             }
 
-            if (converterMap.ContainsKey(inType))
+            if (!ConverterStorage.Instance.Contains(inType))
             {
-                return converterMap[inType];
+                Create(inType, outType);
             }
 
-            if (inType.IsInterface)
-            {
-                var interfaceToObjectConverter = CreateInterfaceToObjectConverter(inType, outType);
-                converterMap[inType] = interfaceToObjectConverter;
-                return interfaceToObjectConverter;
-            }
-
-            if (outType.IsInterface)
-            {
-                var objectToInterfaceConverter = CreateObjectToInterfaceConverter(inType, outType);
-                converterMap[inType] = objectToInterfaceConverter;
-                return objectToInterfaceConverter;
-            }
-
-            throw new NotImplementedException($"{inType} -> {outType}");
+            return ConverterStorage.Instance.GetImplementation(inType);
         }
 
-        private IConverter<object, object> CreateInterfaceToObjectConverter(Type inType, Type outType)
+        private void Create(Type inType, Type outType)
         {
-            var converterName = $"{inType.Name}_To_{outType.Name}Converter";
+            var converterName = $"{GetTypeName(inType)}_To_{GetTypeName(outType)}Converter";
             var converterBuilder = moduleBuilder.DefineType(converterName, TypeAttributes.Class | TypeAttributes.Public);
             converterBuilder.AddInterfaceImplementation(typeof(IConverter<object, object>));
 
@@ -301,45 +331,152 @@ namespace HardTransferObject
                 MethodAttributes.Final |
                 MethodAttributes.HideBySig |
                 MethodAttributes.Virtual,
-                typeof(object),
-                new[] {typeof(object)});
+                objectType,
+                new[] { objectType });
 
+
+            //if (inType.IsInterface)
+            //{
+            //    var interfaceToObjectConverterType = CreateInterfaceToObjectConverter(converterBuilder, methodBuilder, inType, outType);
+            //    ConverterStorage.Instance.Add(inType, interfaceToObjectConverterType);
+            //    return;
+            //}
+
+            if (outType.IsInterface)
+            {
+                var objectToInterfaceConverterType = CreateObjectToInterfaceConverter(converterBuilder, methodBuilder, outType);
+                ConverterStorage.Instance.Add(inType, objectToInterfaceConverterType);
+                return;
+            }
+
+            var interfaceToObjectConverterType = CreateInterfaceToObjectConverter(converterBuilder, methodBuilder, inType, outType);
+            ConverterStorage.Instance.Add(inType, interfaceToObjectConverterType);
+
+            //throw new NotImplementedException($"{inType} -> {outType}");
+        }
+
+        private static string GetTypeName(Type type)
+        {
+            var suffix = string.Empty;
+            if (type.IsGenericType)
+            {
+                suffix = "__" + string.Join("_", type.GetGenericArguments().Select(GetTypeName));
+            }
+
+            return $"{type.Name}{suffix}";
+        }
+
+        private Type CreateObjectToInterfaceConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type outType)
+        {
             var ilConvert = methodBuilder.GetILGenerator();
-            var casted = ilConvert.DeclareLocal(inType);
-            var v1 = ilConvert.DeclareLocal(typeof(object));
 
-            //var casted = (IModel1<string>) @in;
+            var v0 = ilConvert.DeclareLocal(objectType);
+            var brLabel = ilConvert.DefineLabel();
+
+            ilConvert.Ldarg(1);
+            ilConvert.Castclass(outType);
+            ilConvert.Stloc(v0);
+            ilConvert.BrS(brLabel);
+            ilConvert.MarkLabel(brLabel);
+            ilConvert.Ldloc(v0);
+            ilConvert.Ret();
+
+            return converterBuilder.CreateType();
+        }
+
+        private Type CreateInterfaceToObjectConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type inType, Type outType)
+        {
+            var ilConvert = methodBuilder.GetILGenerator();
+
+            var outProps = outType.GetProperties();
+            var inProps = inType.GetProperties();
+
+            var casted = ilConvert.DeclareLocal(inType);
+            var converted = ilConvert.DeclareLocal(outType);
+            var v2 = ilConvert.DeclareLocal(outType);
+            var v3 = ilConvert.DeclareLocal(objectType);
+            var brLabel = ilConvert.DefineLabel();
+
+            //var casted = (IModel1<...>) @in;
             ilConvert.Ldarg(1);
             ilConvert.Castclass(inType);
             ilConvert.Stloc(casted);
 
+            //return new Model1<...>
             ilConvert.Newobj(outType.GetConstructor(Type.EmptyTypes));
+            ilConvert.Stloc(v2);
 
-            var outProps = outType.GetProperties();
-            var inProps = inType.GetProperties();
             for (var i = 0; i < outProps.Length; i++)
             {
-                ilConvert.Dup();
+                var inProp = inProps[i];
+                var outProp = outProps[i];
+
+                if (inProp.PropertyType != outProp.PropertyType)
+                {
+                    //OutProp = (OutPropType)ConverterStorage.Instance.GetImplementation(casted.InProp.GetType()).Convert(casted.InProp)
+                    ilConvert.Ldloc(v2);
+                    ilConvert.Ldsfld(ConverterStorage.InstanceFieldInfo);
+                    ilConvert.Ldtoken(inProp.PropertyType);
+                    
+                    ilConvert.Call(typeOfMethodInfo);
+                    ilConvert.Callvirt(ConverterStorage.GetImplementationFieldInfo);
+                    ilConvert.Ldloc(casted);
+                    ilConvert.Callvirt(inProp.GetMethod);
+                    ilConvert.Callvirt(convertMethodInfo);
+                    ilConvert.Castclass(outProp.PropertyType);
+                    ilConvert.Callvirt(outProp.SetMethod);
+                }
+
+                //Prop1 = casted.Prop1,
+                ilConvert.Ldloc(v2);
                 ilConvert.Ldloc(casted);
-                //ilConvert.Callvirt();
+                ilConvert.Callvirt(inProp.GetMethod);
+                ilConvert.Callvirt(outProp.SetMethod);
             }
 
-            /*
-            return new outType {
-                Prop1 = ConverterMap[in.Prop1.Type].Convert(in.Prop1)
-            };
-            */
+            ilConvert.Ldloc(v2);
+            ilConvert.Stloc(converted);
+            ilConvert.Ldloc(converted);
+            ilConvert.Stloc(v3);
+            ilConvert.BrS(brLabel);
+            ilConvert.MarkLabel(brLabel);
+            ilConvert.Ldloc(v3);
+            ilConvert.Ret();
 
-            throw new NotImplementedException($"{inType} -> {outType}");
+            return converterBuilder.CreateType();
+        }
+    }
+
+
+
+    public class ConverterStorage
+    {
+        public static readonly ConverterStorage Instance = new ConverterStorage();
+        public static readonly FieldInfo InstanceFieldInfo = typeof(ConverterStorage).GetField(nameof(Instance), BindingFlags.Public | BindingFlags.Static);
+        public static readonly MethodInfo GetImplementationFieldInfo = typeof(ConverterStorage).GetMethod(nameof(GetImplementation), BindingFlags.Public | BindingFlags.Instance);
+
+        private readonly ConcurrentDictionary<Type, IConverter<object, object>> converterImplementationMap = new ConcurrentDictionary<Type, IConverter<object, object>>();
+        private readonly ConcurrentDictionary<Type, Type> converterTypeMap = new ConcurrentDictionary<Type, Type>();
+
+        public void Add(Type inType, Type converterType)
+        {
+            converterTypeMap.AddOrUpdate(inType, converterType, (i, c) => c);
+            converterImplementationMap.AddOrUpdate(inType, (IConverter<object, object>)Activator.CreateInstance(converterType), (i, c) => c);
         }
 
-        private IConverter<object, object> CreateObjectToInterfaceConverter(Type inType, Type outType)
+        public bool Contains(Type inType)
         {
-            /*
-            return in;
-            */
+            return converterTypeMap.ContainsKey(inType);
+        }
 
-            throw new NotImplementedException($"{inType} -> {outType}");
+        public IConverter<object, object> GetImplementation(Type inType)
+        {
+            return converterImplementationMap[inType];
+        }
+
+        public Type GetType(Type inType)
+        {
+            return converterTypeMap[inType];
         }
     }
 }
