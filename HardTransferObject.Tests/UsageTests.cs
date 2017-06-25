@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using FluentAssertions;
 using HardTransferObject.Tests.Cases;
@@ -31,7 +32,7 @@ namespace HardTransferObject.Tests
             Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.TypeMap[sampleType].ToString().Replace(sampleType.Namespace + ".", "")}");
 
             Console.WriteLine("===================");
-            Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.GetMappingChain(sampleType).ToString().Replace(sampleType.Namespace + ".", "")}");
+            Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.GetMappingChain(sampleType).Last().ProxyType.ToString().Replace(sampleType.Namespace + ".", "")}");
         }
         
         [Test]
@@ -43,6 +44,8 @@ namespace HardTransferObject.Tests
             var recipientProxySerializer = CreateProxySerializer("Recipient");
 
             var serializedProxy = senderProxySerializer.Serialize(sample);
+            Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
+
             var expected = recipientProxySerializer.Deserialize<IModel1<IModel3<IModel4<Guid>>>>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
@@ -60,6 +63,8 @@ namespace HardTransferObject.Tests
 
     public class JsonSerializer : ISerializer
     {
+        private readonly Newtonsoft.Json.JsonSerializer serializer = new Newtonsoft.Json.JsonSerializer();
+
         public object Deserialize(byte[] data, Type type)
         {
             return JsonConvert.DeserializeObject(Encoding.UTF8.GetString(data), type);

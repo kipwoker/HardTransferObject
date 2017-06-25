@@ -21,15 +21,17 @@ namespace HardTransferObject
             proxyProvider.Add(baseType);
 
             var mappingChain = proxyProvider.GetMappingChain(baseType);
+            var proxyType = mappingChain.Last().ProxyType;
 
-            var proxy = serializer.Deserialize(serializedProxy, mappingChain.Last().ProxyType);
-            return (TBase)mappingChain.Reverse().Aggregate(proxy, (current, t) => t.Serialize(current));
+            var proxy = serializer.Deserialize(serializedProxy, proxyType);
+            return (TBase)mappingChain.Reverse().Aggregate(proxy, (current, t) => t.Deserialize(current));
         }
 
         public byte[] Serialize<TBase>(TBase @base)
         {
             var baseType = typeof(TBase);
             proxyProvider.Add(baseType);
+
             var mappingChain = proxyProvider.GetMappingChain(baseType);
 
             var obj = mappingChain.Aggregate<ProxyMapping, object>(@base, (current, t) => t.Serialize(current));

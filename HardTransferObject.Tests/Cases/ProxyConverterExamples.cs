@@ -58,7 +58,7 @@ namespace HardTransferObject.Tests.Cases
             {
                 Prop = casted.Prop,
                 Number = casted.Number,
-                Model2 = (Model2)ConverterStorage.Instance.GetImplementation(typeof(IModel2)).Convert(casted.Model2)
+                Model2 = (Model2)ConverterStorage.Instance.GetImplementation(typeof(IModel2), typeof(Model2)).Convert(casted.Model2)
             };
             return converted;
         }

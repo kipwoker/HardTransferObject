@@ -311,12 +311,12 @@ namespace HardTransferObject
                 return idealConverter;
             }
 
-            if (!ConverterStorage.Instance.Contains(inType))
+            if (!ConverterStorage.Instance.Contains(inType, outType))
             {
                 Create(inType, outType);
             }
 
-            return ConverterStorage.Instance.GetImplementation(inType);
+            return ConverterStorage.Instance.GetImplementation(inType, outType);
         }
 
         private void Create(Type inType, Type outType)
@@ -345,12 +345,12 @@ namespace HardTransferObject
             if (outType.IsInterface)
             {
                 var objectToInterfaceConverterType = CreateObjectToInterfaceConverter(converterBuilder, methodBuilder, outType);
-                ConverterStorage.Instance.Add(inType, objectToInterfaceConverterType);
+                ConverterStorage.Instance.Add(inType, outType, objectToInterfaceConverterType);
                 return;
             }
 
             var interfaceToObjectConverterType = CreateInterfaceToObjectConverter(converterBuilder, methodBuilder, inType, outType);
-            ConverterStorage.Instance.Add(inType, interfaceToObjectConverterType);
+            ConverterStorage.Instance.Add(inType, outType, interfaceToObjectConverterType);
 
             //throw new NotImplementedException($"{inType} -> {outType}");
         }
@@ -417,7 +417,8 @@ namespace HardTransferObject
                     ilConvert.Ldloc(v2);
                     ilConvert.Ldsfld(ConverterStorage.InstanceFieldInfo);
                     ilConvert.Ldtoken(inProp.PropertyType);
-                    
+                    ilConvert.Call(typeOfMethodInfo);
+                    ilConvert.Ldtoken(outProp.PropertyType);
                     ilConvert.Call(typeOfMethodInfo);
                     ilConvert.Callvirt(ConverterStorage.GetImplementationFieldInfo);
                     ilConvert.Ldloc(casted);
@@ -455,28 +456,34 @@ namespace HardTransferObject
         public static readonly FieldInfo InstanceFieldInfo = typeof(ConverterStorage).GetField(nameof(Instance), BindingFlags.Public | BindingFlags.Static);
         public static readonly MethodInfo GetImplementationFieldInfo = typeof(ConverterStorage).GetMethod(nameof(GetImplementation), BindingFlags.Public | BindingFlags.Instance);
 
-        private readonly ConcurrentDictionary<Type, IConverter<object, object>> converterImplementationMap = new ConcurrentDictionary<Type, IConverter<object, object>>();
-        private readonly ConcurrentDictionary<Type, Type> converterTypeMap = new ConcurrentDictionary<Type, Type>();
+        private readonly ConcurrentDictionary<string, IConverter<object, object>> converterImplementationMap = new ConcurrentDictionary<string, IConverter<object, object>>();
+        private readonly ConcurrentDictionary<string, Type> converterTypeMap = new ConcurrentDictionary<string, Type>();
 
-        public void Add(Type inType, Type converterType)
+        public void Add(Type inType, Type outType, Type converterType)
         {
-            converterTypeMap.AddOrUpdate(inType, converterType, (i, c) => c);
-            converterImplementationMap.AddOrUpdate(inType, (IConverter<object, object>)Activator.CreateInstance(converterType), (i, c) => c);
+            var key = GetKey(inType, outType);
+            converterTypeMap.AddOrUpdate(key, converterType, (i, c) => c);
+            converterImplementationMap.AddOrUpdate(key, (IConverter<object, object>)Activator.CreateInstance(converterType), (i, c) => c);
         }
 
-        public bool Contains(Type inType)
+        public bool Contains(Type inType, Type outType)
         {
-            return converterTypeMap.ContainsKey(inType);
+            return converterTypeMap.ContainsKey(GetKey(inType, outType));
         }
 
-        public IConverter<object, object> GetImplementation(Type inType)
+        public IConverter<object, object> GetImplementation(Type inType, Type outType)
         {
-            return converterImplementationMap[inType];
+            return converterImplementationMap[GetKey(inType, outType)];
         }
 
-        public Type GetType(Type inType)
+        public Type GetType(Type inType, Type outType)
         {
-            return converterTypeMap[inType];
+            return converterTypeMap[GetKey(inType, outType)];
+        }
+
+        private static string GetKey(Type inType, Type outType)
+        {
+            return inType.FullName + outType.FullName;
         }
     }
 }
