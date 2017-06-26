@@ -34,7 +34,12 @@ namespace HardTransferObject
 
             var mappingChain = proxyProvider.GetMappingChain(baseType);
 
-            var obj = mappingChain.Aggregate<ProxyMapping, object>(@base, (current, t) => t.Serialize(current));
+            object obj = @base;
+            foreach (var mapping in mappingChain)
+            {
+                obj = mapping.Serialize(obj);
+            }
+
             return serializer.Serialize(obj, obj.GetType());
         }
     }

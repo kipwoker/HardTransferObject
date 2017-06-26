@@ -350,30 +350,21 @@ namespace HardTransferObject
                 objectType,
                 new[] { objectType });
 
-
-            //if (inType.IsInterface)
+            //if (outType.IsInterface)
             //{
-            //    var interfaceToObjectConverterType = CreateInterfaceToObjectConverter(converterBuilder, methodBuilder, inType, outType);
-            //    ConverterStorage.Instance.Add(inType, interfaceToObjectConverterType);
+            //    Console.WriteLine($"I : {inType.Name} -> {outType.Name}");
+            //    var converter = CreateToInterfaceConverter(converterBuilder, methodBuilder, inType, outType);
+            //    ConverterStorage.Instance.Add(inType, outType, converter);
             //    return;
             //}
 
-            if (outType.IsInterface)
-            {
-                var objectToInterfaceConverterType = CreateObjectToInterfaceConverter(converterBuilder, methodBuilder, outType);
-                ConverterStorage.Instance.Add(inType, outType, objectToInterfaceConverterType);
-                return;
-            }
-
-            var interfaceToObjectConverterType = CreateInterfaceToObjectConverter(converterBuilder, methodBuilder, inType, outType);
+            var interfaceToObjectConverterType = CreateToObjectConverter(converterBuilder, methodBuilder, inType, outType);
             ConverterStorage.Instance.Add(inType, outType, interfaceToObjectConverterType);
-
-            //throw new NotImplementedException($"{inType} -> {outType}");
         }
 
         
 
-        private Type CreateObjectToInterfaceConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type outType)
+        private Type CreateToInterfaceConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type inType, Type outType)
         {
             var ilConvert = methodBuilder.GetILGenerator();
 
@@ -391,7 +382,7 @@ namespace HardTransferObject
             return converterBuilder.CreateType();
         }
 
-        private Type CreateInterfaceToObjectConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type inType, Type outType)
+        private Type CreateToObjectConverter(TypeBuilder converterBuilder, MethodBuilder methodBuilder, Type inType, Type outType)
         {
             var ilConvert = methodBuilder.GetILGenerator();
 
@@ -410,7 +401,9 @@ namespace HardTransferObject
             ilConvert.Stloc(casted);
 
             //return new Model1<...>
-            ilConvert.Newobj(outType.GetConstructor(Type.EmptyTypes));
+            ilConvert.Newobj(!outType.IsInterface
+                ? outType.GetConstructor(Type.EmptyTypes)
+                : inType.GetConstructor(Type.EmptyTypes));
             ilConvert.Stloc(v2);
 
             for (var i = 0; i < outProps.Length; i++)
@@ -418,7 +411,7 @@ namespace HardTransferObject
                 var inProp = inProps[i];
                 var outProp = outProps[i];
 
-                if (inProp.PropertyType != outProp.PropertyType)
+                if (!outType.IsInterface && inProp.PropertyType != outProp.PropertyType)
                 {
                     //OutProp = (OutPropType)ConverterStorage.Instance.GetImplementation(casted.InProp.GetType()).Convert(casted.InProp)
                     ilConvert.Ldloc(v2);
@@ -439,7 +432,7 @@ namespace HardTransferObject
                 ilConvert.Ldloc(v2);
                 ilConvert.Ldloc(casted);
                 ilConvert.Callvirt(inProp.GetMethod);
-                ilConvert.Callvirt(outProp.SetMethod);
+                ilConvert.Callvirt(!outType.IsInterface ? outProp.SetMethod : inProp.SetMethod);
             }
 
             ilConvert.Ldloc(v2);
