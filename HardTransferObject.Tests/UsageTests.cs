@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using FluentAssertions;
 using GroBuf;
@@ -14,14 +15,24 @@ namespace HardTransferObject.Tests
     [TestFixture]
     public class UsageTests
     {
+        private ProxySerializer proxySerializer;
+        private JsonSerializer jsonSerializer;
+        private ProxyProvider proxyProvider;
+        private ModuleBuilder moduleBuilder;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            moduleBuilder = ModuleBuilderProvider.Get();
+            proxyProvider = new ProxyProvider(moduleBuilder);
+            jsonSerializer = new JsonSerializer();
+            proxySerializer = new ProxySerializer(proxyProvider, jsonSerializer);
+        }
+
         [Test]
         public void TestCreateProxyTypes()
         {
-            var moduleBuilder = ModuleBuilderProvider.Get();
-
             var sampleType = typeof(IModel1<IModel3<IModel4<Guid>>>);
-
-            var proxyProvider = new ProxyProvider(moduleBuilder);
 
             proxyProvider.Add(sampleType);
 
@@ -50,30 +61,31 @@ namespace HardTransferObject.Tests
             Console.WriteLine("===================");
             Console.WriteLine($"{sampleType.ToString().Replace(sampleType.Namespace + ".", "")} -> {proxyProvider.GetMappingChain(sampleType).Last().ProxyType.ToString().Replace(sampleType.Namespace + ".", "")}");
         }
-        
+
         [Test]
-        public void TestConvertToBoth()
+        public void TestConvertToBothForNestedLevel1()
         {
-            var sample = Samples.Nested;
+            var sample = Samples.Nested.Prop.Prop;
 
-            var senderProxySerializer = CreateProxySerializer("Sender");
-            var recipientProxySerializer = CreateProxySerializer("Recipient");
-
-            var serializedProxy = senderProxySerializer.Serialize(sample);
+            var serializedProxy = proxySerializer.Serialize(sample);
             Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
 
-            var expected = recipientProxySerializer.Deserialize<IModel1<IModel3<IModel4<Guid>>>>(serializedProxy);
+            var expected = proxySerializer.Deserialize<IModel4<Guid>>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
         }
 
-        private static ProxySerializer CreateProxySerializer(string suffix)
+        [Test]
+        public void TestConvertToBothForNestedLevel2()
         {
-            var moduleBuilder = ModuleBuilderProvider.Create(suffix);
-            var proxyProvider = new ProxyProvider(moduleBuilder);
-            var serializer = new JsonSerializer();
-            var proxySerializer = new ProxySerializer(proxyProvider, serializer);
-            return proxySerializer;
+            var sample = Samples.Nested.Prop;
+
+            var serializedProxy = proxySerializer.Serialize(sample);
+            Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
+
+            var expected = proxySerializer.Deserialize<IModel3<IModel4<Guid>>>(serializedProxy);
+
+            expected.ShouldBeEquivalentTo(sample);
         }
     }
 

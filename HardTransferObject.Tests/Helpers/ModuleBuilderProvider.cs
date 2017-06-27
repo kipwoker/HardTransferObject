@@ -10,7 +10,7 @@ namespace HardTransferObject.Tests.Helpers
 
         public static ModuleBuilder Get() => cache.Value;
 
-        public static ModuleBuilder Create(string suffix = null)
+        private static ModuleBuilder Create(string suffix = null)
         {
             var assemblyName = new AssemblyName { Name = "TestAssembly" + suffix };
             var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);

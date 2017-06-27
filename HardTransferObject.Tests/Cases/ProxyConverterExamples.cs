@@ -30,15 +30,14 @@ namespace HardTransferObject.Tests.Cases
     {
         public object Convert(object @in)
         {
-            var casted = (Model1<string>)@in;
-            var converted = new Model1<string>
+            var casted = (Model4<string>)@in;
+            var converted = new C4<string>
             {
                 Prop = casted.Prop,
-                Number = casted.Number,
-                Model2 = casted.Model2
+                Str = casted.Str
             };
 
-            return (IModel1<string>)converted;
+            return converted;
         }
     }
 

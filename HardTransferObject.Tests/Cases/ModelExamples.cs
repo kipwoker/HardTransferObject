@@ -80,6 +80,13 @@ namespace HardTransferObject.Tests.Cases
         public T Prop { get; set; }
     }
 
+    public class C4<T> : IModel4<T>
+    {
+        public string Str { get; set; }
+        public T Prop { get; set; }
+    }
+
+
     public class Model1<T> : IModel1<T>
     {
         public T Prop { get; set; }
