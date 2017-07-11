@@ -65,12 +65,20 @@ namespace HardTransferObject.Tests
         [Test]
         public void TestConvertToBothForNestedLevel1()
         {
-            var sample = Samples.Nested.Prop.Prop;
+            IModel3<IModel2> sample = new Model3<IModel2>
+            {
+                Number = 123,
+                Prop = new Model2
+                {
+                    Id = "strstr",
+                    No = 3242423
+                }
+            };
 
             var serializedProxy = proxySerializer.Serialize(sample);
             Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
 
-            var expected = proxySerializer.Deserialize<IModel4<Guid>>(serializedProxy);
+            var expected = proxySerializer.Deserialize<IModel3<IModel2>>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
         }
@@ -84,6 +92,19 @@ namespace HardTransferObject.Tests
             Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
 
             var expected = proxySerializer.Deserialize<IModel3<IModel4<Guid>>>(serializedProxy);
+
+            expected.ShouldBeEquivalentTo(sample);
+        }
+
+        [Test]
+        public void TestConvertToBothForNestedLevel3()
+        {
+            var sample = Samples.Nested;
+
+            var serializedProxy = proxySerializer.Serialize(sample);
+            Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
+
+            var expected = proxySerializer.Deserialize<IModel1<IModel3<IModel4<Guid>>>>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
         }

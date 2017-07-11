@@ -75,6 +75,7 @@ namespace HardTransferObject.Tests.Cases
     {
         public IModel<IModel1<string>, IModel2> Convert(ModelProxy<Model1<string>, Model2> proxy)
         {
+            Console.WriteLine($"{proxy.GetType()} to {typeof(Model<IModel1<string>, IModel2>)}");
             return new Model<IModel1<string>, IModel2>
             {
                 Id = proxy.Id,

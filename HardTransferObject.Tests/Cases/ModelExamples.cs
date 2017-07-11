@@ -91,7 +91,7 @@ namespace HardTransferObject.Tests.Cases
     {
         public T Prop { get; set; }
         public int Number { get; set; }
-        public IModel2 Model2 {get; set; }
+        public IModel2 Model2 { get; set; }
     }
 
     public interface IModel11<out T>
@@ -117,6 +117,7 @@ namespace HardTransferObject.Tests.Cases
     public class Model2 : IModel2
     {
         public string Id { get; set; }
+        public int No;
     }
 
     public static class Samples

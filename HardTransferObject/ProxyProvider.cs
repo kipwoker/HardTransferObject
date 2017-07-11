@@ -394,6 +394,16 @@ namespace HardTransferObject
             var v2 = ilConvert.DeclareLocal(outType);
             var v3 = ilConvert.DeclareLocal(objectType);
             var brLabel = ilConvert.DefineLabel();
+            var returnType = !outType.IsInterface ? outType : inType;
+
+            //todo: for debug
+            //ilConvert.Ldstr("{0} to {1}");
+            //ilConvert.Ldarg(1);
+            //ilConvert.Callvirt(typeof(object).GetMethod("GetType"));
+            //ilConvert.Ldtoken(returnType);
+            //ilConvert.Call(typeOfMethodInfo);
+            //ilConvert.Call(typeof(string).GetMethod("Format",new []{ typeof(string), typeof(object), typeof(object) }));
+            //ilConvert.Call(typeof(Console).GetMethod("WriteLine", new []{ typeof(string) }));
 
             //var casted = (IModel1<...>) @in;
             ilConvert.Ldarg(1);
@@ -401,9 +411,8 @@ namespace HardTransferObject
             ilConvert.Stloc(casted);
 
             //return new Model1<...>
-            ilConvert.Newobj(!outType.IsInterface
-                ? outType.GetConstructor(Type.EmptyTypes)
-                : inType.GetConstructor(Type.EmptyTypes));
+            var returnConstructor = returnType.GetConstructor(Type.EmptyTypes);
+            ilConvert.Newobj(returnConstructor);
             ilConvert.Stloc(v2);
 
             for (var i = 0; i < outProps.Length; i++)
@@ -413,7 +422,7 @@ namespace HardTransferObject
 
                 if (!outType.IsInterface && inProp.PropertyType != outProp.PropertyType)
                 {
-                    //OutProp = (OutPropType)ConverterStorage.Instance.GetImplementation(casted.InProp.GetType()).Convert(casted.InProp)
+                    //OutProp = (OutPropType)ConverterStorage.Instance.GetImplementation(casted.InProp.GetType(), casted.OutProp.GetType()).Convert(casted.InProp)
                     ilConvert.Ldloc(v2);
                     ilConvert.Ldsfld(ConverterStorage.InstanceFieldInfo);
                     ilConvert.Ldtoken(inProp.PropertyType);
@@ -426,6 +435,8 @@ namespace HardTransferObject
                     ilConvert.Callvirt(convertMethodInfo);
                     ilConvert.Castclass(outProp.PropertyType);
                     ilConvert.Callvirt(outProp.SetMethod);
+
+                    continue;
                 }
 
                 //Prop1 = casted.Prop1,
