@@ -75,36 +75,27 @@ namespace HardTransferObject.Tests
                 }
             };
 
-            var serializedProxy = proxySerializer.Serialize(sample);
-            Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
-
-            var expected = proxySerializer.Deserialize<IModel3<IModel2>>(serializedProxy);
-
-            expected.ShouldBeEquivalentTo(sample);
+            TestConvertToBoth(sample);
         }
 
         [Test]
         public void TestConvertToBothForNestedLevel2()
         {
-            var sample = Samples.Nested.Prop;
-
-            var serializedProxy = proxySerializer.Serialize(sample);
-            Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
-
-            var expected = proxySerializer.Deserialize<IModel3<IModel4<Guid>>>(serializedProxy);
-
-            expected.ShouldBeEquivalentTo(sample);
+            TestConvertToBoth(Samples.Nested.Prop);
         }
 
         [Test]
         public void TestConvertToBothForNestedLevel3()
         {
-            var sample = Samples.Nested;
+            TestConvertToBoth(Samples.Nested);
+        }
 
+        private void TestConvertToBoth<T>(T sample)
+        {
             var serializedProxy = proxySerializer.Serialize(sample);
             Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
 
-            var expected = proxySerializer.Deserialize<IModel1<IModel3<IModel4<Guid>>>>(serializedProxy);
+            var expected = proxySerializer.Deserialize<T>(serializedProxy);
 
             expected.ShouldBeEquivalentTo(sample);
         }
