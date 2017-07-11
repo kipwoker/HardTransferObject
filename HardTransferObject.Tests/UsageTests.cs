@@ -90,6 +90,12 @@ namespace HardTransferObject.Tests
             TestConvertToBoth(Samples.Nested);
         }
 
+        [Test]
+        public void TestConvertToBothForComplexModel()
+        {
+            TestConvertToBoth(Samples.Model);
+        }
+
         private void TestConvertToBoth<T>(T sample)
         {
             var serializedProxy = proxySerializer.Serialize(sample);
