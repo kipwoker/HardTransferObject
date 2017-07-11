@@ -18,7 +18,7 @@ namespace HardTransferObject
         public TBase Deserialize<TBase>(byte[] serializedProxy)
         {
             var baseType = typeof(TBase);
-            proxyProvider.Add(baseType);
+            proxyProvider.Declare(baseType);
 
             var mappingChain = proxyProvider.GetMappingChain(baseType);
             var proxyType = mappingChain.Last().ProxyType;
@@ -30,7 +30,7 @@ namespace HardTransferObject
         public byte[] Serialize<TBase>(TBase @base)
         {
             var baseType = typeof(TBase);
-            proxyProvider.Add(baseType);
+            proxyProvider.Declare(baseType);
 
             var mappingChain = proxyProvider.GetMappingChain(baseType);
 

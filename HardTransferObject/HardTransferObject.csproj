@@ -40,6 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConverterBuilder.cs" />
+    <Compile Include="Converters.cs" />
+    <Compile Include="ConverterStorage.cs" />
     <Compile Include="IConverter.cs" />
     <Compile Include="IdealConverter.cs" />
     <Compile Include="ILExtensions.cs" />
@@ -50,6 +53,7 @@
     <Compile Include="ProxySerializer.cs" />
     <Compile Include="ProxyMapping.cs" />
     <Compile Include="ProxyProvider.cs" />
+    <Compile Include="TypeExtensions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

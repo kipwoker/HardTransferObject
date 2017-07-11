@@ -34,7 +34,7 @@ namespace HardTransferObject.Tests
         {
             var sampleType = typeof(IModel1<IModel3<IModel4<Guid>>>);
 
-            proxyProvider.Add(sampleType);
+            proxyProvider.Declare(sampleType);
 
             foreach (var type in TypeExtensions.GetAll())
             {
