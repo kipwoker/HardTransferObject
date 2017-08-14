@@ -17,6 +17,7 @@ namespace HardTransferObject.Tests
     {
         private ProxySerializer proxySerializer;
         private JsonSerializer jsonSerializer;
+        private GrobufSerializer grobufSerializer;
         private ProxyProvider proxyProvider;
         private ModuleBuilder moduleBuilder;
 
@@ -26,13 +27,14 @@ namespace HardTransferObject.Tests
             moduleBuilder = ModuleBuilderProvider.Get();
             proxyProvider = new ProxyProvider(moduleBuilder);
             jsonSerializer = new JsonSerializer();
+            grobufSerializer = new GrobufSerializer();
             proxySerializer = new ProxySerializer(proxyProvider, jsonSerializer);
         }
 
         [Test]
         public void TestCreateProxyTypes()
         {
-            var sampleType = typeof(IModel1<IModel3<IModel4<Guid>>>);
+            var sampleType = typeof(IModel<IModel1<string>, IModel2>);
 
             proxyProvider.Declare(sampleType);
 

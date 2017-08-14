@@ -53,6 +53,7 @@
     <Compile Include="ProxySerializer.cs" />
     <Compile Include="ProxyMapping.cs" />
     <Compile Include="ProxyProvider.cs" />
+    <Compile Include="ReflectionExtensions.cs" />
     <Compile Include="TypeExtensions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

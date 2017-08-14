@@ -101,7 +101,7 @@ namespace HardTransferObject
                 return baseType;
             }
 
-            if (IsIEnumerableInterface(baseType))
+            if (baseType.IsIEnumerableInterface() || baseType.IsIEnumerableInterfaceImplementation())
             {
                 return CreateIEnumerableImplementation(baseType);
             }
@@ -166,27 +166,9 @@ namespace HardTransferObject
 
         private Type CreateIEnumerableImplementation(Type type)
         {
-            var enumerableType = GetEnumerableType(type);
+            var enumerableType = type.GetEnumerableType();
             var patchedType = GetOrCreate(enumerableType).MakeArrayType();
             return patchedType;
-        }
-
-        private static Type GetEnumerableType(Type type)
-        {
-            if (IsIEnumerableInterface(type))
-            {
-                return type.GetGenericArguments()[0];
-            }
-
-            return type
-                .GetInterfaces()
-                .FirstOrDefault(@interface => @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(IEnumerable<>))?
-                .GetGenericArguments()[0];
-        }
-
-        private static bool IsIEnumerableInterface(Type type)
-        {
-            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>);
         }
 
         private Type CreateImplementation(Type type)

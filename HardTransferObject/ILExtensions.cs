@@ -11,6 +11,11 @@ namespace HardTransferObject
             Emit(il, OpCodes.Brfalse, label);
         }
 
+        public static void BrtrueS(this ILGenerator il, Label label)
+        {
+            Emit(il, OpCodes.Brtrue_S, label);
+        }
+
         public static void Br(this ILGenerator il, Label label)
         {
             Emit(il, OpCodes.Br, label);
@@ -46,6 +51,11 @@ namespace HardTransferObject
             return il.DeclareLocal(localType, pinned);
         }
 
+        public static void Unbox_Any(this ILGenerator il, Type type)
+        {
+            Emit(il, OpCodes.Unbox_Any, type);
+        }
+
         public static void Ldarg(this ILGenerator il, int argIndex)
         {
             switch (argIndex)
@@ -78,6 +88,11 @@ namespace HardTransferObject
             {
                 Emit(il, OpCodes.Ldarga, (short)argIndex);
             }
+        }
+
+        public static void Add(this ILGenerator il)
+        {
+            Emit(il, OpCodes.Add);
         }
 
         public static void Ldc_I4(this ILGenerator il, int constant)
@@ -117,6 +132,11 @@ namespace HardTransferObject
             Emit(il, OpCodes.Ldftn, method);
         }
 
+        public static void Ldelem_Ref(this ILGenerator il)
+        {
+            Emit(il, OpCodes.Ldelem_Ref);
+        }
+
         public static void Ldloc(this ILGenerator il, LocalBuilder local)
         {
             switch (local.LocalIndex)
@@ -137,6 +157,21 @@ namespace HardTransferObject
                     }
                     break;
             }
+        }
+
+        public static void LdLen(this ILGenerator il)
+        {
+            Emit(il, OpCodes.Ldlen);
+        }
+
+        public static void Clt(this ILGenerator il)
+        {
+            Emit(il, OpCodes.Clt);
+        }
+
+        public static void ConvI4(this ILGenerator il)
+        {
+            Emit(il, OpCodes.Conv_I4);
         }
 
         public static void Ldloca(this ILGenerator il, LocalBuilder local)

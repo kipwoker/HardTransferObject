@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace HardTransferObject.Tests.Cases
 {
-    public class Model1InCollector : IConverter<Model1<string>, IModel1<string>>
+    public class Model1InConverter : IConverter<Model1<string>, IModel1<string>>
     {
         public IModel1<string> Convert(Model1<string> @in)
         {
@@ -15,7 +15,7 @@ namespace HardTransferObject.Tests.Cases
         }
     }
 
-    public class Model1OutCollector : IConverter<IModel1<string>, Model1<string>>
+    public class Model1OutConverter : IConverter<IModel1<string>, Model1<string>>
     {
         public Model1<string> Convert(IModel1<string> @in)
         {
@@ -26,7 +26,7 @@ namespace HardTransferObject.Tests.Cases
         }
     }
 
-    public class Collection1InCollector : IConverter<object, object>
+    public class Model4ToGeneratedClassConverter : IConverter<object, object>
     {
         public object Convert(object @in)
         {
@@ -41,7 +41,7 @@ namespace HardTransferObject.Tests.Cases
         }
     }
 
-    public class Collection1OutCollector : IConverter<object, object>
+    public class InterfaceToModelConverter : IConverter<object, object>
     {
         public object Convert(object @in)
         {
@@ -56,7 +56,7 @@ namespace HardTransferObject.Tests.Cases
         }
     }
 
-    public class Collection2OutCollector : IConverter<object, object>
+    public class InterfaceToNestedModelConverter : IConverter<object, object>
     {
         public object Convert(object @in)
         {
@@ -68,6 +68,75 @@ namespace HardTransferObject.Tests.Cases
                 Model2 = (Model2)ConverterStorage.Instance.GetImplementation(typeof(IModel2), typeof(Model2)).Convert(casted.Model2)
             };
             return converted;
+        }
+    }
+
+    public class ValueTypeToValueTypeConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (KeyValuePair<Guid, IModel1<string>>)@in;
+            var converted = new KeyValuePair<Guid, Model1<string>>(casted.Key, (Model1<string>)ConverterStorage.Instance.GetImplementation(typeof(IModel1<string>), typeof(Model1<string>)).Convert(casted));
+            return converted;
+        }
+    }
+
+    public class ObjectToValueTypeConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (Model<Guid, IModel1<string>>)@in;
+            var converted = new KeyValuePair<Guid, Model1<string>>(casted.Id, (Model1<string>)ConverterStorage.Instance.GetImplementation(typeof(IModel1<string>), typeof(Model1<string>)).Convert(casted));
+            return converted;
+        }
+    }
+
+    public class CollectionToArrayWithDifferentItemTypesConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (IEnumerable<IModel1<string>>) @in;
+            var array = casted.ToArray();
+            var converted = new Model1<string>[array.Length];
+            for (var i = 0; i < array.Length; ++i)
+            {
+                converted[i] = (Model1<string>)ConverterStorage.Instance.GetImplementation(typeof(IModel1<string>), typeof(Model1<string>)).Convert(array[i]);
+            }
+
+            return converted;
+        }
+    }
+
+    public class ArrayToCollectionWithDifferentItemTypesConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (Model1<string>[])@in;
+            var converted = new IModel1<string>[casted.Length];
+            for (var i = 0; i < casted.Length; ++i)
+            {
+                converted[i] = (IModel1<string>)ConverterStorage.Instance.GetImplementation(typeof(Model1<string>), typeof(IModel1<string>)).Convert(casted[i]);
+            }
+
+            return (IEnumerable<IModel1<string>>)converted;
+        }
+    }
+
+    public class ArrayToCollectionWithSameItemTypesConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            return (IEnumerable<Model1<string>>)(Model1<string>[])@in;
+        }
+    }
+
+    public class CollectionToArrayWithSameItemTypesConverter : IConverter<object, object>
+    {
+        public object Convert(object @in)
+        {
+            var casted = (IEnumerable<Model1<string>>)@in;
+            var array = casted.ToArray();
+            return array;
         }
     }
 
