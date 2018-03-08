@@ -75,8 +75,16 @@ namespace HardTransferObject.Tests.Cases
     {
         public object Convert(object @in)
         {
-            var casted = (KeyValuePair<Guid, IModel1<string>>)@in;
-            var converted = new KeyValuePair<Guid, Model1<string>>(casted.Key, (Model1<string>)ConverterStorage.Instance.GetImplementation(typeof(IModel1<string>), typeof(Model1<string>)).Convert(casted));
+            var casted = (MyGenericStruct<Guid, IModel1<string>, string>)@in;
+            var converted = new MyGenericStruct<Guid, Model1<string>, string>(
+                casted.P1, 
+                (Model1<string>)
+                ConverterStorage
+                    .Instance
+                    .GetImplementation(typeof(IModel1<string>), typeof(Model1<string>))
+                    .Convert(casted.P2),
+                casted.P3
+            );
             return converted;
         }
     }

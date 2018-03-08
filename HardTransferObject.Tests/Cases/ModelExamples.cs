@@ -34,6 +34,22 @@ namespace HardTransferObject.Tests.Cases
         public Model2 Class2 { get; set; }
     }
 
+    public interface IModelCollection<T1, T2>
+    {
+        IEnumerable<T1> Collection1 { get; }
+        IEnumerable<T2> Collection2 { get; }
+        Dictionary<Guid, T1> Dictionary1 { get; }
+        List<T2> List1 { get; }
+    }
+
+    public class ModelCollection<T1, T2> : IModelCollection<T1, T2>
+    {
+        public IEnumerable<T1> Collection1 { get; set; }
+        public IEnumerable<T2> Collection2 { get; set; }
+        public Dictionary<Guid, T1> Dictionary1 { get; set; }
+        public List<T2> List1 { get; set; }
+    }
+
     public class ModelProxy<T1, T2>
     {
         public Guid Id { get; set; }
@@ -120,6 +136,21 @@ namespace HardTransferObject.Tests.Cases
         public int No;
     }
 
+    public struct MyGenericStruct<T1, T2, T3>
+    {
+        public T1 P1 { get; }
+        public T2 P2 { get; }
+        public T3 P3 { get; }
+
+        public MyGenericStruct(T1 p1, T2 p2, T3 p3)
+        {
+            P1 = p1;
+            P2 = p2;
+            P3 = p3;
+        }
+
+    }
+
     public static class Samples
     {
         public static readonly IModel1<IModel3<IModel4<Guid>>> Nested = new Model1<IModel3<IModel4<Guid>>>
@@ -189,7 +220,29 @@ namespace HardTransferObject.Tests.Cases
             })
         };
 
+        public static readonly IModelCollection<int, string> EasyCollection = new ModelCollection<int, string>
+        {
+            Collection1 = new []{ 2, 3, 4 },
+            Collection2 = new [] {"a", "db", "dc"},
+            Dictionary1 = new Dictionary<Guid, int> {{Guid.NewGuid(), 77}, { Guid.NewGuid(), 78 } },
+            List1 = new List<string>(new [] { "l1", "l2", "l3" })
+        };
 
+        public static readonly IModelCollection<int, IModel2> MediumCollection = new ModelCollection<int, IModel2>
+        {
+            Collection1 = new[] { 2, 3, 4 },
+            Collection2 = new[] 
+            {
+                new Model2 { Id = "coll2_1" },
+                new Model2 { Id = "coll2_2" }
+            },
+            Dictionary1 = new Dictionary<Guid, int> { { Guid.NewGuid(), 77 }, { Guid.NewGuid(), 78 } },
+            List1 = new List<IModel2>(new[]
+            {
+                new Model2 { Id = "l1" },
+                new Model2 { Id = "l2" }
+            })
+        };
 
         public static readonly ModelProxy<Model1<string>, Model2> Proxy = new ModelProxy<Model1<string>, Model2>
         {

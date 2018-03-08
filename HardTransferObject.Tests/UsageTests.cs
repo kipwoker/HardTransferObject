@@ -93,6 +93,18 @@ namespace HardTransferObject.Tests
         }
 
         [Test]
+        public void TestConvertToBothForEasyCollection()
+        {
+            TestConvertToBoth(Samples.EasyCollection);
+        }
+
+        [Test]
+        public void TestConvertToBothForMediumCollection()
+        {
+            TestConvertToBoth(Samples.MediumCollection);
+        }
+
+        [Test]
         public void TestConvertToBothForComplexModel()
         {
             TestConvertToBoth(Samples.Model);

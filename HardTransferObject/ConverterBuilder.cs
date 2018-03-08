@@ -79,28 +79,68 @@ namespace HardTransferObject
             var converted = il.DeclareLocal(outType);
             var v2 = il.DeclareLocal(objectType);
 
+            var inPropMap = inType.GetProperties().ToDictionary(x => x.Name.ToLower());
+            var outCtor = outType.GetConstructors().OrderByDescending(x => x.GetParameters().Length).First();
+            var ctorParamMap = outCtor
+                .GetParameters()
+                .Select(outParam =>
+                {
+                    var outParamKey = outParam.Name.ToLower();
+                    return new {outParam, inProp = inPropMap.ContainsKey(outParamKey) ? inPropMap[outParamKey] : null};
+                })
+                .ToArray();
+
+            var invalidParamTransitions = ctorParamMap.Where(x => x.inProp == null).ToArray();
+            if (invalidParamTransitions.Length > 0)
+            {
+                throw new Exception($"Can't serialize this kind of struct. Need to know how to map next ctor params: {string.Join(", ", invalidParamTransitions.Select(x => x.outParam.Name))}");
+            }
+
+
             il.Ldarg(1);
             il.Unbox_Any(inType);
+            il.Stloc(casted);
 
-            //var outProps = outType.GetProperties();
-            //var inProps = inType.GetProperties();
+            il.Ldloca(converted);
 
-            //var casted = il.DeclareLocal(inType);
-            //var converted = il.DeclareLocal(outType);
-            //var v2 = il.DeclareLocal(outType);
-            //var v3 = il.DeclareLocal(objectType);
-            //var brLabel = il.DefineLabel();
-            //var returnType = !outType.IsInterface ? outType : inType;
+            foreach (var ctorParamPair in ctorParamMap)
+            {
+                var inItem = ctorParamPair.inProp;
+                var outItem = ctorParamPair.outParam;
+                var inItemType = inItem.PropertyType;
+                var outItemType = outItem.ParameterType;
+                if (inItemType == outItemType)
+                {
+                    il.Ldloca(casted);
+                    il.Call(inItem.GetMethod);
+                }
+                else
+                {
+                    il.Ldsfld(ConverterStorage.InstanceFieldInfo);
+                    il.Ldtoken(inItemType);
+                    il.Call(typeOfMethodInfo);
+                    il.Ldtoken(outItemType);
+                    il.Call(typeOfMethodInfo);
+                    il.Callvirt(ConverterStorage.GetImplementationFieldInfo);
+                    il.Ldloca(casted);
+                    il.Call(inItem.GetMethod);
+                    il.Callvirt(convertMethodInfo);
+                    il.Castclass(outItemType);
+                }
+            }
 
-            ////var casted = (IModel1<...>) @in;
-            //il.Ldarg(1);
-            //il.Castclass(inType);
-            //il.Stloc(casted);
+            il.Call(outCtor);
 
-            ////return new Struct<...>(all args)
-            //var returnConstructor = returnType.GetConstructors().OrderByDescending(x => x.GetParameters().Length).First();
-            //il.Newobj(returnConstructor);
-            //il.Stloc(v2);
+            il.Ldloc(converted);
+            il.Box(outType);
+            il.Stloc(v2);
+
+            var brLabel = il.DefineLabel();
+            il.BrS(brLabel);
+            il.MarkLabel(brLabel);
+
+            il.Ldloc(v2);
+            il.Ret();
         }
 
         private void EmitCollectionConverter(ILGenerator il, Type inType, Type outType)
