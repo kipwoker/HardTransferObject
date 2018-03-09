@@ -6,16 +6,16 @@ namespace HardTransferObject.Tests.Helpers
 {
     public static class ModuleBuilderProvider
     {
-        private static readonly Lazy<ModuleBuilder> cache = new Lazy<ModuleBuilder>(() => Create(), true);
+        private static readonly Lazy<(AssemblyBuilder, ModuleBuilder)> cache = new Lazy<(AssemblyBuilder, ModuleBuilder)>(() => Create(), true);
 
-        public static ModuleBuilder Get() => cache.Value;
+        public static (AssemblyBuilder, ModuleBuilder) Get() => cache.Value;
 
-        private static ModuleBuilder Create(string suffix = null)
+        private static (AssemblyBuilder, ModuleBuilder) Create(string suffix = null)
         {
             var assemblyName = new AssemblyName { Name = "TestAssembly" + suffix };
-            var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-            var module = assemblyBuilder.DefineDynamicModule("TestModule" + suffix );
-            return module;
+            var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
+            var module = assemblyBuilder.DefineDynamicModule("TestModule" + suffix, "test.dll");
+            return (assemblyBuilder, module);
         }
     }
 }

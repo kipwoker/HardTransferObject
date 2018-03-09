@@ -19,16 +19,17 @@ namespace HardTransferObject.Tests
         private JsonSerializer jsonSerializer;
         private GrobufSerializer grobufSerializer;
         private ProxyProvider proxyProvider;
-        private ModuleBuilder moduleBuilder;
+        private AssemblyBuilder assemblyBuilder;
 
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            moduleBuilder = ModuleBuilderProvider.Get();
+            (var assemblyBuilder, var moduleBuilder) = ModuleBuilderProvider.Get();
             proxyProvider = new ProxyProvider(moduleBuilder);
             jsonSerializer = new JsonSerializer();
             grobufSerializer = new GrobufSerializer();
             proxySerializer = new ProxySerializer(proxyProvider, jsonSerializer);
+            this.assemblyBuilder = assemblyBuilder;
         }
 
         [Test]
@@ -51,6 +52,11 @@ namespace HardTransferObject.Tests
             foreach (var type in proxyProvider.TypeMap.Keys.Union(proxyProvider.TypeMap.Values))
             {
                 Console.WriteLine(type.Name);
+                if (type.IsIEnumerableInterface() || type.IsIEnumerableInterfaceImplementation())
+                {
+                    continue;
+                }
+
                 foreach (var prop in type.GetProperties())
                 {
                     Console.WriteLine($"  {prop.PropertyType.Name} {prop.Name}");
@@ -105,6 +111,12 @@ namespace HardTransferObject.Tests
         }
 
         [Test]
+        public void TestConvertToBothForSimpleCollection()
+        {
+            TestConvertToBoth(Samples.SimpleCollection);
+        }
+
+        [Test]
         public void TestConvertToBothForComplexModel()
         {
             TestConvertToBoth(Samples.Model);
@@ -113,9 +125,11 @@ namespace HardTransferObject.Tests
         private void TestConvertToBoth<T>(T sample)
         {
             var serializedProxy = proxySerializer.Serialize(sample);
+            
             Console.WriteLine(Encoding.UTF8.GetString(serializedProxy));
 
             var expected = proxySerializer.Deserialize<T>(serializedProxy);
+            //assemblyBuilder.Save("test.dll");
 
             expected.ShouldBeEquivalentTo(sample);
         }

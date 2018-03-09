@@ -20,6 +20,11 @@ namespace HardTransferObject
             var baseType = typeof(TBase);
             proxyProvider.Declare(baseType);
 
+            if (false)
+            {
+                return default(TBase);
+            }
+
             var mappingChain = proxyProvider.GetMappingChain(baseType);
             var proxyType = mappingChain.Last().ProxyType;
 

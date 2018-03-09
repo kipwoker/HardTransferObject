@@ -40,6 +40,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CollectionConverter.cs" />
     <Compile Include="ConverterBuilder.cs" />
     <Compile Include="Converters.cs" />
     <Compile Include="ConverterStorage.cs" />

@@ -103,14 +103,8 @@ namespace HardTransferObject.Tests.Cases
     {
         public object Convert(object @in)
         {
-            var casted = (IEnumerable<IModel1<string>>) @in;
-            var array = casted.ToArray();
-            var converted = new Model1<string>[array.Length];
-            for (var i = 0; i < array.Length; ++i)
-            {
-                converted[i] = (Model1<string>)ConverterStorage.Instance.GetImplementation(typeof(IModel1<string>), typeof(Model1<string>)).Convert(array[i]);
-            }
-
+            var casted = (IEnumerable<IModel2>) @in;
+            var converted = CollectionConverter.Convert<IModel2, Model2>(casted);
             return converted;
         }
     }
@@ -119,14 +113,9 @@ namespace HardTransferObject.Tests.Cases
     {
         public object Convert(object @in)
         {
-            var casted = (Model1<string>[])@in;
-            var converted = new IModel1<string>[casted.Length];
-            for (var i = 0; i < casted.Length; ++i)
-            {
-                converted[i] = (IModel1<string>)ConverterStorage.Instance.GetImplementation(typeof(Model1<string>), typeof(IModel1<string>)).Convert(casted[i]);
-            }
-
-            return (IEnumerable<IModel1<string>>)converted;
+            IEnumerable<Model2> casted = (Model2[])@in;
+            IEnumerable<IModel2> converted = CollectionConverter.Convert<Model2, IModel2>(casted);
+            return converted;
         }
     }
 

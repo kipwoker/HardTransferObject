@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -13,6 +14,10 @@ namespace HardTransferObject
 
         private static readonly MethodInfo convertMethodInfo = typeof(IConverter<object, object>)
             .GetMethod(nameof(IConverter<object, object>.Convert), BindingFlags.Public | BindingFlags.Instance);
+
+        private static readonly MethodInfo collectionConverterInfo = typeof(CollectionConverter)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(m => m.Name.Contains(nameof(Converters.Convert)));
 
         private readonly Type objectType = typeof(object);
         private readonly Type intType = typeof(int);
@@ -153,73 +158,24 @@ namespace HardTransferObject
                 if (inItemType != outItemType)
                 {
                     var casted = il.DeclareLocal(inType);
-                    var array = il.DeclareLocal(inItemType.MakeArrayType());
-                    var converted = il.DeclareLocal(inType);
-                    var i = il.DeclareLocal(intType);
-                    var v4 = il.DeclareLocal(boolType);
-                    var v5 = il.DeclareLocal(objectType);
-                    var loopEntryPoint = il.DefineLabel();
-                    var continueLoop = il.DefineLabel();
+                    var converted = il.DeclareLocal(outType);
+                    var v2 = il.DeclareLocal(objectType);
 
-                    il.Ldarga(1);
+                    il.Ldarg(1);
                     il.Castclass(inType);
                     il.Stloc(casted);
 
                     il.Ldloc(casted);
-                    il.Call(typeof(Enumerable).GetMethod("ToArray").MakeGenericMethod(inItemType));
-                    il.Stloc(array);
-
-                    il.Ldloc(array);
-                    il.LdLen();
-                    il.ConvI4();
-                    il.Newarr(outItemType);
+                    il.Call(collectionConverterInfo.MakeGenericMethod(inItemType, outItemType));
                     il.Stloc(converted);
 
-                    il.Ldc_I4(0);
-                    il.Stloc(i);
-
-                    il.BrS(loopEntryPoint);
-                    
-                    il.MarkLabel(continueLoop);
-
                     il.Ldloc(converted);
-                    il.Ldloc(i);
-                    il.Ldsfld(ConverterStorage.InstanceFieldInfo);
-                    il.Ldtoken(inItemType);
-                    il.Call(typeOfMethodInfo);
-                    il.Ldtoken(outItemType);
-                    il.Call(typeOfMethodInfo);
-                    il.Callvirt(ConverterStorage.GetImplementationFieldInfo);
-                    il.Ldloc(array);
-                    il.Ldloc(i);
-                    il.Ldelem_Ref();
-                    il.Callvirt(convertMethodInfo);
-                    il.Castclass(outType);
-                    il.Stelem_Ref();
-
-                    il.Ldloc(i);
-                    il.Ldc_I4(1);
-                    il.Add();
-                    il.Stloc(i);
-
-                    il.MarkLabel(loopEntryPoint);
-                    il.Ldloc(i);
-                    il.Ldloc(array);
-                    il.LdLen();
-                    il.ConvI4();
-                    il.Clt();
-                    il.Stloc(v4);
-
-                    il.Ldloc(v4);
-                    il.BrtrueS(continueLoop);
-
-                    il.Ldloc(converted);
-                    il.Stloc(v5);
+                    il.Stloc(v2);
 
                     var ret = il.DefineLabel();
                     il.BrS(ret);
                     il.MarkLabel(ret);
-                    il.Ldloc(v5);
+                    il.Ldloc(v2);
                     il.Ret();
                 }
                 else
@@ -253,69 +209,25 @@ namespace HardTransferObject
 
                 if (inItemType != outItemType)
                 {
-                    var casted = il.DeclareLocal(inType);
-                    var converted = il.DeclareLocal(inType);
-                    var i = il.DeclareLocal(intType);
-                    var v3 = il.DeclareLocal(boolType);
-                    var v4 = il.DeclareLocal(objectType);
-                    var loopEntryPoint = il.DefineLabel();
-                    var continueLoop = il.DefineLabel();
+                    var casted = il.DeclareLocal(typeof(IEnumerable<>).MakeGenericType(inItemType));
+                    var converted = il.DeclareLocal(outType);
+                    var v2 = il.DeclareLocal(objectType);
 
                     il.Ldarga(1);
                     il.Castclass(inType);
                     il.Stloc(casted);
 
                     il.Ldloc(casted);
-                    il.LdLen();
-                    il.ConvI4();
-                    il.Newarr(outItemType);
+                    il.Call(collectionConverterInfo.MakeGenericMethod(inItemType, outItemType));
                     il.Stloc(converted);
 
-                    il.Ldc_I4(0);
-                    il.Stloc(i);
-
-                    il.BrS(loopEntryPoint);
-
-                    il.MarkLabel(continueLoop);
-
                     il.Ldloc(converted);
-                    il.Ldloc(i);
-                    il.Ldsfld(ConverterStorage.InstanceFieldInfo);
-                    il.Ldtoken(inItemType);
-                    il.Call(typeOfMethodInfo);
-                    il.Ldtoken(outItemType);
-                    il.Call(typeOfMethodInfo);
-                    il.Callvirt(ConverterStorage.GetImplementationFieldInfo);
-                    il.Ldloc(casted);
-                    il.Ldloc(i);
-                    il.Ldelem_Ref();
-                    il.Callvirt(convertMethodInfo);
-                    il.Castclass(outType);
-                    il.Stelem_Ref();
-
-                    il.Ldloc(i);
-                    il.Ldc_I4(1);
-                    il.Add();
-                    il.Stloc(i);
-
-                    il.MarkLabel(loopEntryPoint);
-                    il.Ldloc(i);
-                    il.Ldloc(casted);
-                    il.LdLen();
-                    il.ConvI4();
-                    il.Clt();
-                    il.Stloc(v3);
-
-                    il.Ldloc(v3);
-                    il.BrtrueS(continueLoop);
-
-                    il.Ldloc(converted);
-                    il.Stloc(v4);
+                    il.Stloc(v2);
 
                     var ret = il.DefineLabel();
                     il.BrS(ret);
                     il.MarkLabel(ret);
-                    il.Ldloc(v4);
+                    il.Ldloc(v2);
                     il.Ret();
                 }
                 else

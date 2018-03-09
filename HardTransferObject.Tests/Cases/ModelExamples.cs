@@ -50,6 +50,16 @@ namespace HardTransferObject.Tests.Cases
         public List<T2> List1 { get; set; }
     }
 
+    public interface IModelCollection1<T1>
+    {
+        IEnumerable<T1> Collection1 { get; }
+    }
+
+    public class ModelCollection1<T1> : IModelCollection1<T1>
+    {
+        public IEnumerable<T1> Collection1 { get; set; }
+    }
+
     public class ModelProxy<T1, T2>
     {
         public Guid Id { get; set; }
@@ -134,6 +144,11 @@ namespace HardTransferObject.Tests.Cases
     {
         public string Id { get; set; }
         public int No;
+    }
+
+    public class Model2Proxy : IModel2
+    {
+        public string Id { get; set; }
     }
 
     public struct MyGenericStruct<T1, T2, T3>
@@ -242,6 +257,15 @@ namespace HardTransferObject.Tests.Cases
                 new Model2 { Id = "l1" },
                 new Model2 { Id = "l2" }
             })
+        };
+
+        public static readonly IModelCollection1<IModel2> SimpleCollection = new ModelCollection1<IModel2>
+        {
+            Collection1 = new[]
+            {
+                new Model2 { Id = "coll2_1" },
+                new Model2 { Id = "coll2_2" }
+            }
         };
 
         public static readonly ModelProxy<Model1<string>, Model2> Proxy = new ModelProxy<Model1<string>, Model2>
